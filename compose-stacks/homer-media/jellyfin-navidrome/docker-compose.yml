@@ -1,0 +1,44 @@
+# ==============================================================================
+# MicroVM: Homer-Media_server | Stack: Jellyfin & Navidrome
+# Purpose: Video streaming with Intel QuickSync GPU acceleration and music streaming
+# ==============================================================================
+
+services:
+  jellyfin_new:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin_new
+    network_mode: host
+    user: "1000:1000"
+    restart: unless-stopped
+    environment:
+      - TZ=America/Sao_Paulo
+    devices:
+      # Passthrough de nó de renderização da iGPU (SR-IOV / Intel QuickSync)
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - "991"
+    volumes:
+      - /mnt/metadata_drive/jellyfin_new/config:/config
+      - /mnt/metadata_drive/jellyfin_new/cache:/cache
+      - type: bind
+        source: /mnt/mnemosyneomv_MSataP_media
+        target: /media
+      # Fontes customizadas para queima de legendas com aceleração
+      - type: bind
+        source: /mnt/metadata_drive/jellyfin_new/cache/fonts
+        target: /usr/local/share/fonts/custom
+        read_only: true
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    user: "1000:1000"
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    environment:
+      - ND_ENABLEINSIGHTSCOLLECTOR=false
+    volumes:
+      - /mnt/metadata_drive/navidrome/data:/data
+      # Biblioteca de música montada estritamente como somente-leitura (:ro)
+      - /mnt/mnemosyneomv_MSataP_media/music:/music:ro
